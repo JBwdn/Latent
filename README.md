@@ -1,2 +1,2 @@
 # Latent
-ML tools for synbio
+ML tools for Synbio
