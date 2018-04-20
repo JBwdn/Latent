@@ -3,6 +3,10 @@
 """
 Created on Fri Apr 20 11:41:51 2018
 
+synbioTools (c) University of Manchester 2015
+synbioTools is licensed under the MIT License.
+To view a copy of this license, visit <http://opensource.org/licenses/MIT/>.
+
 @author: Pablo Carbonell
 @description: Collection of tools to encode common synbio data 
     into useful information for creating training sets.
@@ -54,16 +58,18 @@ def tensorSeq(seqs, MAX_SEQ_LENGTH, SEQDEPTH, TOKEN_SIZE=20):
 
 """ Chemical encoding """
 
-def tensorChem(chems, FINGERPRINT_SIZE, CHEMDEPTH, TOKEN_SIZE=1, RADIUS=2, BINARY=True):
+def chemFP(chem, FINGERPRINT_SIZE, MIN_PATH=1, MAX_PATH=5):
+    fpix = AllChem.RDKFingerprint(chem, minPath=MIN_PATH, maxPath=MAX_PATH, fpSize=FINGERPRINT_SIZE)    
+    fpix = [int(x) for x in list(fpix.ToBitString())]
+    return fpix
+
+def tensorChem(chems, FINGERPRINT_SIZE, CHEMDEPTH, TOKEN_SIZE=1, MIN_PATH=1, MAX_PATH=5):
     """ Encode a chemical as a tensor by concatenating fingerprints
     up to desired depth """
     TRAIN_BATCH_SIZE = len(chems)   
     Xs = np.zeros( (TRAIN_BATCH_SIZE, FINGERPRINT_SIZE, CHEMDEPTH*TOKEN_SIZE) )
     for i in range(0, len(chems)):
-        if BINARY:
-            fpix = AllChem.GetMorganFingerprintAsBitVect(chems[i],RADIUS,FINGERPRINT_SIZE)
-        else:
-            fpix = AllChem.GetHashedMorganFingerprint(chems[i],RADIUS,FINGERPRINT_SIZE)      
+        fpix = chemFP(chems[i])
         for l in range(0, len(fpix)):
             for k in range(0, CHEMDEPTH):
                 try:
@@ -74,15 +80,11 @@ def tensorChem(chems, FINGERPRINT_SIZE, CHEMDEPTH, TOKEN_SIZE=1, RADIUS=2, BINAR
 
 """ Chemical reaction encoding """
 
-def reacFP(reac, FINGERPRINT_SIZE, RADIUS=2, BINARY=True):
+def reacFP(reac, FINGERPRINT_SIZE, MIN_PATH=1, MAX_PATH=5):
     """ Reaction fingerprint """
-    left, rigth = reacs[i]
-    if BINARY:
-        left = [AllChem.GetMorganFingerprintAsBitVect(m, RADIUS, FINGERPRINT_SIZE) for m in left]
-        right = [AllChem.GetMorganFingerprintAsBitVect(m, RADIUS, FINGERPRINT_SIZE) for m in right]
-    else:
-        left = [AllChem.GetMorganFingerprint(m, RADIUS, FINGERPRINT_SIZE) for m in left]
-        right = [AllChem.GetMorganFingerprint(m, RADIUS, FINGERPRINT_SIZE) for m in right]        
+    left, right = reacs[i]
+    left = [chemFP(m, MIN_PATH, MAX_PATH) for m in left]
+    right = [chemFP(m, MIN_PATH, MAX_PATH) for m in right]
     lfp = left[0]
     for m in left:
         lfp = lfp | m
@@ -92,11 +94,11 @@ def reacFP(reac, FINGERPRINT_SIZE, RADIUS=2, BINARY=True):
     rfp = lfp ^ rfp
     return rfp
 
-def tensorReac(reacs, FINGERPRINT_SIZE, CHEMDEPTH, TOKEN_SIZE=1, RADIUS=2, BINARY=True):
-     TRAIN_BATCH_SIZE = len(reacs)   
-     Xs = np.zeros( (TRAIN_BATCH_SIZE, FINGERPRINT_SIZE, CHEMDEPTH*TOKEN_SIZE) )
-     for i in range(0, len(reacs)):
-         fpix = reacFP(reacs[i], FINGERPRINT_SIZE, RADIUS, BINARY)
+def tensorReac(reacs, FINGERPRINT_SIZE, CHEMDEPTH, TOKEN_SIZE=1,  MIN_PATH=1, MAX_PATH=5):
+    TRAIN_BATCH_SIZE = len(reacs)   
+    Xs = np.zeros( (TRAIN_BATCH_SIZE, FINGERPRINT_SIZE, CHEMDEPTH*TOKEN_SIZE) )
+    for i in range(0, len(reacs)):
+         fpix = reacFP(reacs[i], MIN_PATH, MAX_PATH)
          for l in range(0, len(fpix)):
             for k in range(0, CHEMDEPTH):
                 try:
