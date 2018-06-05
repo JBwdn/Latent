@@ -44,8 +44,8 @@ def tensorSeq(seqs, MAX_SEQ_LENGTH, SEQDEPTH, TOKEN_SIZE=20):
     TRAIN_BATCH_SIZE = len(seqs)
     Xs = np.zeros( (TRAIN_BATCH_SIZE, MAX_SEQ_LENGTH, SEQDEPTH*TOKEN_SIZE) )
     for i in range(0, len(seqs)):
+        aaix = aaindex( seqs[i] )
         for j in range(0, len(seqs[i])):
-            aaix = aaindex( seqs[i][j]  )
             for l in range(0, len(aaix)):
                 for k in range(0, SEQDEPTH):
                     try:
