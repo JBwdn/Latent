@@ -52,6 +52,8 @@ def tensorSeq(seqs, MAX_SEQ_LENGTH, SEQDEPTH, TOKEN_SIZE=20):
                         Xs[i, l, aaix[l+k] + TOKEN_SIZE*k] = 1
                     except:
                         continue
+    import pdb
+    pdb.set_trace()
     """ Flip sequences (zero-padding at the start) """
     Xsr = np.flip( Xs, 1 )
     return Xsr
@@ -63,19 +65,15 @@ def chemFP(chem, FINGERPRINT_SIZE, MIN_PATH=1, MAX_PATH=5):
     fpix = [int(x) for x in list(fpix.ToBitString())]
     return fpix
 
-def tensorChem(chems, FINGERPRINT_SIZE, CHEMDEPTH, TOKEN_SIZE=1, MIN_PATH=1, MAX_PATH=5):
+def tensorChem(chems, FINGERPRINT_SIZE, CHEMDEPTH):
     """ Encode a chemical as a tensor by concatenating fingerprints
     up to desired depth """
     TRAIN_BATCH_SIZE = len(chems)   
-    Xs = np.zeros( (TRAIN_BATCH_SIZE, FINGERPRINT_SIZE, CHEMDEPTH*TOKEN_SIZE) )
+    Xs = np.zeros( (TRAIN_BATCH_SIZE, FINGERPRINT_SIZE, CHEMDEPTH) )
     for i in range(0, len(chems)):
-        fpix = chemFP(chems[i])
-        for l in range(0, len(fpix)):
-            for k in range(0, CHEMDEPTH):
-                try:
-                    Xs[i, l, fpix[l+k] + TOKEN_SIZE*k] = 1
-                except:
-                    continue
+        for k in range(0, CHEMDEPTH):
+            fpix = chemFP(chems[i],FINGERPRINT_SIZE, k+1, k+1)
+            Xs[i, :, k] = fpix
     return Xs
 
 """ Chemical reaction encoding """
