@@ -45,19 +45,15 @@ def tensorSeq(seqs, MAX_SEQ_LENGTH, SEQDEPTH, TOKEN_SIZE=20):
     Xs = np.zeros( (TRAIN_BATCH_SIZE, MAX_SEQ_LENGTH, SEQDEPTH*TOKEN_SIZE) )
     for i in range(0, len(seqs)):
         aaix = aaindex( seqs[i] )
-        for j in range(0, len(seqs[i])):
-            for l in range(0, len(aaix)):
-                for k in range(0, SEQDEPTH):
-                    try:
-                        Xs[i, l, aaix[l+k] + TOKEN_SIZE*k] = 1
-                    except:
-                        continue
-    import pdb
-    pdb.set_trace()
+        for l in range(0, MAX_SEQ_LENGTH):
+            for k in range(0, SEQDEPTH):
+                try:
+                    Xs[i, l, aaix[l+k] + TOKEN_SIZE*k] = 1
+                except:
+                    continue
     """ Flip sequences (zero-padding at the start) """
     Xsr = np.flip( Xs, 1 )
-    return Xsr
-
+    return Xsr, Xs
 """ Chemical encoding """
 
 def chemFP(chem, FINGERPRINT_SIZE, MIN_PATH=1, MAX_PATH=5):
