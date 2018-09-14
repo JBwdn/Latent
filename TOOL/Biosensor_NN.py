@@ -51,7 +51,7 @@ def get_para():
 """Main"""
 input_file,output_path,input_file_solubility,input_file_thermostability=get_para()
 chem,seq,combined=read_info()
-bn.visu_KDE(Train_seq,"seq length",path+'Density Plot of seqs length.svg')
+#bn.visu_KDE(Train_seq,"seq length",path+'Density Plot of seqs length.svg')
 path=bn.set_path(str(output_path))
 cv=bn.load_biosensor(input_file,output_path)
 #Load processed biosensor data
