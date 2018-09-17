@@ -2,10 +2,13 @@
 #%load_ext ipython_bell
 #Get input_file and output_path from shell para
 import Bioneural as bn
+import importlib
+importlib.reload(bn) 
 """Read arguments"""
 import sys,getopt
 import re
 import numpy as np
+import pickle
 def read_info():
     data=[]
     for line in open("Config.txt","r"): 
@@ -68,3 +71,5 @@ combine_model.compile(loss='binary_crossentropy',optimizer= 'Adam',metrics=['acc
 c_m=combine_model.fit([Train_seq]+[Train_chemical],Label,batch_size=combined['Batch_size'], epochs=combined['Epoch'],validation_split=0.3)
 bn.training_vis(c_m,"binary_classifier",output_path+"train_dist.svg")
 combine_model.save(output_path+'combined_model.h5')
+with open('param.pkl', 'wb') as fp:
+    pickle.dump( d_to_index, fp)

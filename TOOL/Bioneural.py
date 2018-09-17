@@ -162,6 +162,7 @@ def index_seq(seq,vocab):
             p=vocab.index(i)
             index.append(p)
         else:
+            continue
             index.append('?')
     index = index
     return index
@@ -178,7 +179,9 @@ def tensor_pad(seqs,vocab,max_length=False):
     else:
         pad=pad_sequences(seqs_index, maxlen=max_length, dtype='int32',padding='pre', truncating='pre', value=0.)
 #     # one-hot encode the pad
-#     encoded = to_categorical(pad)
+    encoded = to_categorical(pad)
+#    pad = encoded.reshape(encoded.shape[0], -1)
+#    pad = encoded
 
     #return seqs_index
     return pad
@@ -770,12 +773,14 @@ def load_processed_biosensor(cv,input_file,output_path):
     Label=hardmax(Label)
     return Train_seq,Train_chemical,Label,d_to_index
 
-def load_biosensor(input_file,path):
+def load_biosensor(input_file,path,filt='TF',filtlab='YES'):
     cv=read_csv(input_file)
+    if filt in cv:
+        cv = cv.loc[ cv[filt] == filtlab, ]
     cv = cv[pd.notnull(cv['InChI'])]
     cv = cv[pd.notnull(cv['Seq'])]
     cv=cv.sample(frac=1)
-    cv=cv.sample(n=899)
+#    cv=cv.sample(n=899)
     cv.reset_index(drop=True, inplace=True)
     """Load Data"""
     # cv.drop(['Unnamed: 0','Name','Organism'], axis=1,inplace=True)
@@ -784,9 +789,11 @@ def load_biosensor(input_file,path):
     Y_biosensor=pd.Series([1]*len(cv))
     k1=pd.DataFrame({'chem':list(X_chem_biosensor),'seq':list(X_seq_biosensor),'label':list(Y_biosensor)})
     # Contrast Data
-    X_chem_biosensor_new=X_chem_biosensor.shift(periods=2, freq=None, axis=0)
-    X_chem_biosensor_new[0]=list(X_chem_biosensor)[-2]
-    X_chem_biosensor_new[1]=list(X_chem_biosensor)[-1]
+    cv2 = cv.sample(frac=1)
+    X_chem_biosensor_new = cv2['InChI']
+#    X_chem_biosensor_new=X_chem_biosensor.shift(periods=2, freq=None, axis=0)
+#    X_chem_biosensor_new[0]=list(X_chem_biosensor)[-2]
+#    X_chem_biosensor_new[1]=list(X_chem_biosensor)[-1]
     X_seq_biosensor_new=X_seq_biosensor
     Y_biosensor_new=pd.Series([0]*len(cv))
     k2=pd.DataFrame({'chem':list(X_chem_biosensor_new),'seq':list(X_seq_biosensor_new),'label':list(Y_biosensor_new)})
