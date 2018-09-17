@@ -737,6 +737,23 @@ def get_para():
 
 
 """Load Biosensors"""
+def load_processed_biosensor_pablo(cv, d_to_index):
+    #InChi to SMILES
+    Train_chemical= []
+    for chem in cv['chem']:
+        Train_chemical.append( Chem.MolFromInchi(chem) )
+    Train_seq=cv['seq']
+    # Generate vocab
+#    d_to_index=vis_seq_elements(Train_seq,output_path+'Frequencies Hist of Amino Acids Thermostability.svg')
+    """Tokenize data"""
+    # Tokenlize chem
+    Train_chemical=flatten_chem(Train_chemical)
+    # Tokenlize seq_thermostability
+    Train_seq=tensor_pad(Train_seq,d_to_index)
+    return Train_seq,Train_chemical
+
+
+"""Load Biosensors"""
 def load_processed_biosensor(cv,input_file,output_path):
     #InChi to SMILES
     Train_chemical=load_chemicals(properties='Inchi',path=input_file,input_values=cv['chem'])
