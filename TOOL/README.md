@@ -27,7 +27,7 @@ Compatibility
 The pipeline should be run on Python>=3 (it was tested on 3.6.5).
 
 As of Python >= 3.6.5, the script require some python standard library. For users who still need to support several packages are required: 
-IPython.display, numpy, scipy.stats, pandas, time, keras, sklearn, matplotlib, csv, Biopython, rdkit
+IPython.display, numpy, scipy.stats, pandas, time, keras, sklearn, matplotlib, csv, Biopython, rdkit,h5py
 
 
 Configration
@@ -99,6 +99,7 @@ python Biosensor_NN.py -i biosensor_seqs.csv -o F:/result/
 
 %%Biosensor prediction with Tranfer Learning:
 python Biosensor_NN_Transfer_Learning.py -i biosensor_seqs.csv -o F:/result/ -s delaney.csv
+# need some manually modification in line 89
 
 %%Thermostability Prediction:
 python Thermostability.py -i non-thermophilic_proteins.txt -t thermophilic_proteins.txt -o F:/result/
@@ -126,7 +127,7 @@ training_result.csv : The summary information of training result
 
 %%Thermostability Prediction:
 
-.h5 : The trained artificial neural network in each fold.
+.h5 : The trained artificial neural network architecture in each fold.
 Density Plot of seqs length.svg : The density distribution of sequences lengths
 model_info.csv : The information of hyperparameters
 Frequencies Hist of Amino Acids Thermostability.svg : The information of amino acid count (Enzymes)
@@ -155,7 +156,16 @@ Density Plot of seqs length.svg : The density distribution of sequences lengths
 linear_regression.svg : The linear regression on the predicted output and the labels
 Frequencies Hist of Amino Acids Thermostability.svg : The information of amino acid count (Enzymes)
 train_fold.svg : The training accuracy and loss value distribution
-                
+
+Test
+----
+
+ python predict.py -i ./test/test.csv -t ./result/combined_model.h5 -o ./test/ 
+
+-i input file containing sequence, chemecal structure and label (if no label filled in 0)
+-t Use the h5 file generated from last step. It contains the weights of ANN we trained.
+-o output path
+               
 Bugs
 ----
 
