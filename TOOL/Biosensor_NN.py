@@ -2,10 +2,15 @@
 #%load_ext ipython_bell
 #Get input_file and output_path from shell para
 import Bioneural as bn
+
+import importlib
+importlib.reload(bn) 
 """Read arguments"""
 import sys,getopt
 import re
+from keras.callbacks import ModelCheckpoint
 import numpy as np
+import pickle
 def read_info():
     data=[]
     for line in open("Config.txt","r"): 
@@ -51,20 +56,35 @@ def get_para():
 """Main"""
 input_file,output_path,input_file_solubility,input_file_thermostability=get_para()
 chem,seq,combined=read_info()
-bn.visu_KDE(Train_seq,"seq length",path+'Density Plot of seqs length.svg')
+#bn.visu_KDE(Train_seq,"seq length",path+'Density Plot of seqs length.svg')
 path=bn.set_path(str(output_path))
 cv=bn.load_biosensor(input_file,output_path)
 #Load processed biosensor data
 Train_seq,Train_chemical,Label,d_to_index=bn.load_processed_biosensor(cv,input_file,output_path)
 #Build combined NN
+print("Seq config:")
+print(seq)
+
 Seq_NN=bn.create_network(layer_type=(seq['Type'],[Train_seq.shape[1]]+seq['Neuron']),outputlayer_type=seq['Output_type'],optimizer=seq['Optimizer'],Init=seq['InitializationMethod'],vocab=d_to_index,drop_out=seq['Dropout_rate'])
+
+print("Chem config:")
+print(chem)
+
 Chem_NN=bn.create_network(layer_type=(chem['Type'],[Train_chemical.shape[1]]+chem['Neuron']),outputlayer_type=chem['Output_type'],optimizer=chem['Optimizer'],Init=chem['InitializationMethod'])
+print("Combined nurons:")
+print(combined)
+
 combine_model = bn.combine_models(Seq_NN,Train_seq.shape[1],Chem_NN,Train_chemical.shape[1],combined['Neuron'])
 combine_model.summary()
 #Train models
 #Enable the bell sound in Ipython
 #%%bell -n say
 combine_model.compile(loss='binary_crossentropy',optimizer= 'Adam',metrics=['accuracy'])
-c_m=combine_model.fit([Train_seq]+[Train_chemical],Label,batch_size=combined['Batch_size'], epochs=combined['Epoch'],validation_split=0.3)
+filepath="model_{epoch:02d}-{val_acc:.2f}.hdf5"
+
+checkpointer = ModelCheckpoint(filepath="./result/checkpoints/weights-{epoch:02d}-{val_loss:.2f}.hdf5",monitor='val_acc',mode='max',verbose=1, save_best_only=True)
+c_m=combine_model.fit([Train_seq]+[Train_chemical],Label,batch_size=combined['Batch_size'], epochs=combined['Epoch'],validation_split=0.3, callbacks=[checkpointer])
 bn.training_vis(c_m,"binary_classifier",output_path+"train_dist.svg")
 combine_model.save(output_path+'combined_model.h5')
+with open('param.pkl', 'wb') as fp:
+    pickle.dump( d_to_index, fp)

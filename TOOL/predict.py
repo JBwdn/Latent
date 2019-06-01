@@ -56,7 +56,7 @@ if __name__ == '__main__':
     chem,seq,combined=read_info()
     #bn.visu_KDE(Train_seq,"seq length",path+'Density Plot of seqs length.svg')
     path=bn.set_path(str(output_path))
-    cv=bn.load_biosensor(input_file,output_path)
+    cv=bn.load_biosensor_not_depli(input_file,output_path)
     #Load processed biosensor data
     Train_seq,Train_chemical,Label,d_to_index=bn.load_processed_biosensor(cv,input_file,output_path)
     

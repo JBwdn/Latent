@@ -6,6 +6,7 @@ from keras.utils import plot_model
 import matplotlib.pyplot as plt
 import pandas as pd
 import csv
+from keras import regularizers
 from keras import models
 from keras import optimizers
 from keras import layers
@@ -23,12 +24,11 @@ from Bio import SeqIO
 from Bio.PDB.Polypeptide import d1_to_index
 from keras.wrappers.scikit_learn import KerasClassifier
 from sklearn.model_selection import cross_val_score
-from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 from sklearn.datasets import make_classification
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem.Draw import IPythonConsole
-from sklearn.cross_validation import train_test_split
 import numpy as np
 from scipy.stats import norm
 from sklearn.neighbors.kde import KernelDensity
@@ -162,6 +162,7 @@ def index_seq(seq,vocab):
             p=vocab.index(i)
             index.append(p)
         else:
+            continue
             index.append('?')
     index = index
     return index
@@ -178,7 +179,9 @@ def tensor_pad(seqs,vocab,max_length=False):
     else:
         pad=pad_sequences(seqs_index, maxlen=max_length, dtype='int32',padding='pre', truncating='pre', value=0.)
 #     # one-hot encode the pad
-#     encoded = to_categorical(pad)
+    encoded = to_categorical(pad)
+#    pad = encoded.reshape(encoded.shape[0], -1)
+#    pad = encoded
 
     #return seqs_index
     return pad
@@ -265,16 +268,16 @@ def create_network(layer_type=("LSTM",[4096,32,32,1]),outputlayer_type='linear_r
     if layer_type[0]=="LSTM":
         network.add(Embedding(output_dim=layer_type[1][1], input_dim=len(vocab), input_length=(layer_type[1][0]),embeddings_initializer='uniform'))
         for i in layer_type[1][2:-1]: 
-            network.add(LSTM(i, return_sequences=True, activation='relu',kernel_initializer='he_normal',bias_initializer='zeros'))  # returns a sequence of vectors of dimension 32
+            network.add(LSTM(i, return_sequences=True, activation='relu',kernel_initializer='he_normal',bias_initializer='zeros',kernel_regularizer=regularizers.l2(0.01)))  # returns a sequence of vectors of dimension 32
 #         network.add(LSTM(i, return_sequences=True, activation='relu',kernel_initializer='he_normal',bias_initializer='zeros'))  # returns a sequence of vectors of dimension 32
             network.add(Dropout(drop_out))
         #     network.add(LSTM(32))  # return a single vector of dimension 32
         network.add(Flatten())
     elif layer_type[0]=="DFF":
         if len(layer_type[1])<4:
-            network.add(layers.Dense(units=layer_type[1][1], activation='relu',input_shape=(layer_type[1][0],),kernel_initializer='he_normal',bias_initializer='zeros',name='dense_77'))
+            network.add(layers.Dense(units=layer_type[1][1], activation='relu',input_shape=(layer_type[1][0],),kernel_initializer='he_normal',bias_initializer='zeros',name='dense_77',kernel_regularizer=regularizers.l2(0.01)))
         else:
-            network.add(layers.Dense(units=layer_type[1][1], activation='relu', input_shape=(layer_type[1][0],),kernel_initializer='he_normal',bias_initializer='zeros'))
+            network.add(layers.Dense(units=layer_type[1][1], activation='relu', input_shape=(layer_type[1][0],),kernel_initializer='he_normal',bias_initializer='zeros',kernel_regularizer=regularizers.l2(0.01)))
             for index, i in enumerate(layer_type[1][2:-1]):
                 if index == len(layer_type[1][2:-1]) - 1:
                     network.add(layers.Dense(units=i, activation='relu',name='dense_77'))
@@ -737,6 +740,23 @@ def get_para():
 
 
 """Load Biosensors"""
+def load_processed_biosensor_pablo(cv, d_to_index):
+    #InChi to SMILES
+    Train_chemical= []
+    for chem in cv['chem']:
+        Train_chemical.append( Chem.MolFromInchi(chem) )
+    Train_seq=cv['seq']
+    # Generate vocab
+#    d_to_index=vis_seq_elements(Train_seq,output_path+'Frequencies Hist of Amino Acids Thermostability.svg')
+    """Tokenize data"""
+    # Tokenlize chem
+    Train_chemical=flatten_chem(Train_chemical)
+    # Tokenlize seq_thermostability
+    Train_seq=tensor_pad(Train_seq,d_to_index)
+    return Train_seq,Train_chemical
+
+
+"""Load Biosensors"""
 def load_processed_biosensor(cv,input_file,output_path):
     #InChi to SMILES
     Train_chemical=load_chemicals(properties='Inchi',path=input_file,input_values=cv['chem'])
@@ -748,17 +768,38 @@ def load_processed_biosensor(cv,input_file,output_path):
     # Tokenlize chem
     Train_chemical=flatten_chem(Train_chemical)
     # Tokenlize seq_thermostability
-    Train_seq=tensor_pad(Train_seq,d_to_index)
+    Train_seq=tensor_pad(Train_seq,d_to_index,max_length=1408)
     # Hardmax thermostability
     Label=hardmax(Label)
     return Train_seq,Train_chemical,Label,d_to_index
 
-def load_biosensor(input_file,path):
+def load_biosensor_not_depli(input_file,path,filt='TF',filtlab='YES'):
     cv=read_csv(input_file)
+    if filt in cv:
+        cv = cv.loc[ cv[filt] == filtlab, ]
     cv = cv[pd.notnull(cv['InChI'])]
     cv = cv[pd.notnull(cv['Seq'])]
     cv=cv.sample(frac=1)
-    cv=cv.sample(n=899)
+#    cv=cv.sample(n=899)
+    cv.reset_index(drop=True, inplace=True)
+    """Load Data"""
+    # cv.drop(['Unnamed: 0','Name','Organism'], axis=1,inplace=True)
+    X_chem_biosensor=cv['InChI']
+    X_seq_biosensor=cv['Seq']
+    Y_biosensor=pd.Series([1]*len(cv))
+    k1=pd.DataFrame({'chem':list(X_chem_biosensor),'seq':list(X_seq_biosensor),'label':list(Y_biosensor)})
+    return k1
+
+def load_biosensor(input_file,path,filt='TF',filtlab='YES'):
+    cv=read_csv(input_file)
+    if filt in cv:
+        cv = cv.loc[ cv[filt] == filtlab, ]
+        
+        
+    cv = cv[pd.notnull(cv['InChI'])]
+    cv = cv[pd.notnull(cv['Seq'])]
+    cv=cv.sample(frac=1)
+    #    cv=cv.sample(n=899)
     cv.reset_index(drop=True, inplace=True)
     """Load Data"""
     # cv.drop(['Unnamed: 0','Name','Organism'], axis=1,inplace=True)
@@ -767,16 +808,25 @@ def load_biosensor(input_file,path):
     Y_biosensor=pd.Series([1]*len(cv))
     k1=pd.DataFrame({'chem':list(X_chem_biosensor),'seq':list(X_seq_biosensor),'label':list(Y_biosensor)})
     # Contrast Data
-    X_chem_biosensor_new=X_chem_biosensor.shift(periods=2, freq=None, axis=0)
-    X_chem_biosensor_new[0]=list(X_chem_biosensor)[-2]
-    X_chem_biosensor_new[1]=list(X_chem_biosensor)[-1]
+    cv2 = cv.sample(frac=1)
+    X_chem_biosensor_new = cv2['InChI']
     X_seq_biosensor_new=X_seq_biosensor
-    Y_biosensor_new=pd.Series([0]*len(cv))
-    k2=pd.DataFrame({'chem':list(X_chem_biosensor_new),'seq':list(X_seq_biosensor_new),'label':list(Y_biosensor_new)})
+    labels=[]
+    for count,i in enumerate(X_chem_biosensor_new):
+        tocan=0 
+        for k in (list((cv.loc[ cv["InChI"] ==i, ])['Seq'])):
+            if (k==str(X_seq_biosensor_new[count])):
+                tocan=1
+        if tocan==1:
+            labels.append(1)
+        else:
+            labels.append(0)
+    k2=pd.DataFrame({'chem':list(X_chem_biosensor_new),'seq':list(X_seq_biosensor_new),'label':list(labels)})
     k1=k1.append(k2)
     k1=k1.sample(frac=1)
     k1.to_csv(path+'processed_data.csv',index=True,sep=',')
     return k1
+    
 
 def read_thermostability(input_file_thermostability="C:/Users/DR/Desktop/P2/Latent-master/data/thermostability/",output_path=":"):
     # Load seqs_thermoatability
